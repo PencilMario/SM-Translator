@@ -21,7 +21,7 @@
 #include <colors>
 #include <logger>
 
-#define VER "1.0.0"
+#define VER "1.0.1"
 #define SHORT_LEN 5
 #define Language_NotSupport "NONE"
 
@@ -378,13 +378,16 @@ public Action Command_Say(int client, const char[] command, int args)
     tlobj.src = GetTLangFromChar(temp, ShortInSM);
     tlobj.team = StrEqual("say_team", command);
     bool shouldtl = false;
+
+
     // Foreign 发言玩家是外国人，翻译该玩家说的话给其他非外国人
     if(GetServerLanguage() != GetClientLanguage(client))
     {
+        log.debug("发言人使用非服务器语言");
         if (!g_translator[client])return Plugin_Continue;
         for(int i = 1; i <= MaxClients; i++)
         {
-            if(IsClientInGame(i) && !IsFakeClient(i) && i != client && GetClientLanguage(client) != GetClientLanguage(i))
+            if(IsClientInGame(i) && !IsFakeClient(i) && GetClientLanguage(client) != GetClientLanguage(i) && i != client)
             {
                 GetLanguageInfo(GetClientLanguage(i), temp, 6); // get Foreign language
                 tlobj.AddDstLanguage(GetTLangFromChar(temp, ShortInSM), i);
@@ -394,13 +397,14 @@ public Action Command_Say(int client, const char[] command, int args)
     }
     else // Not foreign 发言玩家不是外国人，翻译该玩家的话给其他外国人 
     {
+        log.debug("发言人使用服务器语言");
         for(int i = 1; i <= MaxClients; i++)
         {
-            if(IsClientInGame(i) && !IsFakeClient(i) && i != client)
+            if(IsClientInGame(i) && !IsFakeClient(i) &&  i != client)
             {
-                if (!g_translator[i])continue;
+                if (!g_translator[i]) continue;
                 GetLanguageInfo(GetClientLanguage(i), temp, 6); // get Foreign language
-                tlobj.AddDstLanguage(GetTLangFromChar(temp, ShortInSM), client);
+                tlobj.AddDstLanguage(GetTLangFromChar(temp, ShortInSM), i);
                 shouldtl = true; // Translate not Foreign msg to Foreign player
             }
         }
@@ -414,12 +418,12 @@ public Action Command_Say(int client, const char[] command, int args)
         }
         for (int i = 1; i < sizeof(tlobj.clients); i++){
             if (tlobj.clients[i] != LA_None){
-                Format(_temp2, sizeof(_temp2),"%s|%N",  _temp2, i);
+                Format(_temp2, sizeof(_temp2),"%s|%N(%i)",  _temp2, i, i);
             }
         }
         CreateRequest(tlobj); 
         log.debug("创建新翻译对象：%i", g_TlQueuePos);
-        log.debug("message: \"%s\" \nsayer: %N\nteam: %i\nsrc: %s \ndst:%s \nplayer: %s", tlobj.message, tlobj.sayer, tlobj.team, ShortInSM[tlobj.src],
+        log.debug("message: \"%s\" \nsayer: %N(%i)\nteam: %i\nsrc: %s \ndst:%s \nplayer: %s", tlobj.message, tlobj.sayer, tlobj.sayer, tlobj.team, ShortInSM[tlobj.src],
             _temp, _temp2);
     }
     return Plugin_Continue;
